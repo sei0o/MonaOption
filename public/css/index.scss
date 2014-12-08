@@ -1,0 +1,167 @@
+@mixin boxSizing {
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+}
+
+//-------------------------------------------------------------------------
+
+@font-face{
+	font-family: mplus-1p-regular;
+	src: url('/fonts/mplus-1p-regular.woff') format("woff"),
+	     url('http://mplus-fonts.sourceforge.jp/webfonts/mplus-1p-regular.ttf')
+	     format("truetype");
+}
+@font-face{
+	font-family: mplus-1p-bold;
+	src: url('/fonts/mplus-1p-bold.woff') format("woff"),
+	     url('http://mplus-fonts.sourceforge.jp/webfonts/mplus-1p-bold.ttf')
+	     format("truetype");
+}
+
+html,body{
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	border: none;
+}
+
+.big{
+	font-size:30px !important; 
+}
+
+.right{
+	text-align:right;
+}
+
+* { @include boxSizing; font-family: 'mplus-1p-regular', 'Helvetica Neue'; }
+
+//----------------------------------------------------------------------------
+
+h1, h2, h3, h4, h5, h6{
+	margin: 0;
+	padding: 0;
+	font-family: 'mplus-1p-bold';
+	font-weight: normal;
+}
+
+h1 { font-size: 40px; }
+h2 { font-size: 30px; }
+
+b, strong{
+	font-family: 'mplus-1p-bold';
+	font-weight: normal;
+}
+
+table{
+  border-collapse: collapse;
+  border-spacing: 0;
+	//border:solid 1px #ccc;
+	table-layout: fixed;
+	border-radius: 6px;
+	margin:10px 0 10px 0;
+	td{
+		border-right:solid 1px #ccc;
+		border-top:solid 1px #ccc;
+		padding: 8px;
+		&:last-child{
+			border-right:solid 1px #ccc;
+		}
+		&:first-child{
+			border-left: solid 1px #ccc;
+		}
+	}
+	tr:last-child{
+		border-bottom: solid 1px #ccc;
+	}
+	th{
+		background-color: #777;
+		color:white;
+		font-weight: normal;
+		padding: 8px;
+		&:first-child{
+			border-top-left-radius: 6px;
+			border-left:none;
+		}
+		&:last-child{
+			border-top-right-radius: 6px;
+			border-right:none;
+		}
+	}
+}
+
+//----------------------------------------------------------------------------
+
+a{
+	&:link, &:visited{
+		color: #005288;
+		text-decoration: none;
+		transition: .2s;
+	}
+	&:hover, &:active, &:focus{
+		color: #09f;
+	}
+}
+
+body{
+	background-color: #eee;
+	min-height: 100%;
+}
+
+#page_header{
+	@include boxSizing;
+	z-index: 10; // 固定ヘッダ
+	position: fixed;
+	height: 50px;
+	width: 100%;
+	background-color: #222;
+	color:white;
+	line-height: 1;
+	h1{
+		display: inline-block;
+		font-size:30px;
+		margin: 10px;
+	}
+}
+
+#menu{
+	padding: 0;
+	margin: 0 20px 0 0;
+	float:right;
+	list-style-type: none;
+	li{
+		display: inline;
+		line-height: 50px;
+	}
+}
+
+main{
+	@include boxSizing;
+	width: 70%;
+	margin: 0 auto;
+	background-color: white;
+	padding: 20px;
+	padding-top: 60px;
+	height: 100%;
+}
+
+#main_menu{
+	list-style-type: none;
+	li{
+		@include boxSizing;
+		display: inline-block;
+		width: 200px;
+		height: 200px;
+		background-color: #aaa;
+		
+		margin: 10px;
+		padding: 10px;
+		text-align: center;
+		line-height: 170px;
+		font-size: 50px;
+		font-family: "mplus-1p-bold";
+		color:white;
+		&:nth-of-type(even){
+			background-color: #777;
+		}
+	}
+}

@@ -1,0 +1,19 @@
+振込み先アドレス:<span class="big"><strong><%= @pack.nyuukin_address %></strong></span><br>
+金額:<span class="big"><strong><%= @pack.amount * settings.price %>Mona</strong></span><br>
+入金済み:<%= @pack.paid %>Mona (内 入金確認済み: <%= @pack.paid_confirmed %>Mona)<br>
+<span style="font-size: 25px;">
+<% if @pay_complete %>
+	<span style="color:#42836c"><strong>支払い完了</strong></span>
+<% else %>
+	<span style="color:#d34633"><strong>支払い未完了</strong></span>
+<% end %>
+</span><br>
+<table>
+	<tr><th>ID</th><th>数量</th><th>購入者アドレス</th><th>当選額</th></tr>
+	<tr>
+		<td><%= @pack.id %></td>
+		<td><%= @pack.amount %></td>
+		<td><%= @pack.payout_address %></td>
+		<td><%= @pack.payouted %></td>
+	</tr>
+</table>

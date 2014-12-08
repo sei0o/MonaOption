@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" type="text/css" href="/css/index.css">
+	<title><%= @title %> | <%= settings.site_name %></title>
+</head>
+<body>
+	<header id="page_header">
+		<h1><%= settings.site_name %></h1>
+		<ul id="menu">
+			<li id="user_name">sei0o</li>
+		</li>
+	</header>
+	<main>
+		<h1><%= @title %></h1>
+		<%= yield %>
+	</main>
+</body>
+</html>
