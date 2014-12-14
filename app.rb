@@ -3,6 +3,7 @@ require 'sinatra/base'
 require 'active_record'
 require 'yaml'
 require 'bcrypt'
+require 'mysql2'
 require './monacoinrpc.rb'
 
 class MonaOption < Sinatra::Base
