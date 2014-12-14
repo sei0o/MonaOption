@@ -1,0 +1,16 @@
+development:
+  adapter: mysql2
+  encoding: utf8
+  host: localhost
+  database: dbname_development
+  username: username
+  password: passwd
+  socket: /var/run/mysqld/mysqld.sock
+production:
+  adapter: mysql2
+  encoding: utf8
+  host: localhost
+  database: dbname_development
+  username: username
+  password: passwd
+  socket: /var/run/mysqld/mysqld.sock
