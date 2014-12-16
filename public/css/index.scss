@@ -1,3 +1,7 @@
+$warning: #e72626;
+$success: #25875a;
+$notice:  #aa6800;
+
 @mixin boxSizing {
 	box-sizing: border-box;
 	-moz-box-sizing: border-box;
@@ -165,3 +169,29 @@ main{
 		}
 	}
 }
+
+// -----------------------
+
+.flash{
+	border-radius:7px;
+	padding: 10px;
+	margin: 10px;
+	@include boxSizing;
+}
+
+.notice{
+	background-color: lighten($notice, 30%);
+	color: darken($notice, 20%);
+}
+
+.success{
+	background-color: lighten($success, 30%);
+	color: darken($success, 20%);
+}
+
+.warning{
+	background-color: lighten($warning, 30%);
+	color: darken($warning, 20%);
+}
+
+// -----------------------

@@ -159,3 +159,26 @@ main {
 #main_menu li:nth-of-type(even) {
   background-color: #777;
 }
+
+.flash {
+  border-radius: 7px;
+  padding: 10px;
+  margin: 10px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+}
+
+.notice {
+  background-color: #ffb644;
+  color: #442a00;
+}
+
+.success {
+  background-color: #6ed7a7;
+  color: #0f3725;
+}
+
+.warning {
+  background-color: #f6b0b0;
+  color: #961111;
+}
