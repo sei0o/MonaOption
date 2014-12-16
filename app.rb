@@ -36,6 +36,17 @@ class MonaOption < Sinatra::Base
 			end
 		end
 	end
+	
+	helpers do
+		def login?
+			!!session[:user_id]
+		end
+		
+		def login_user
+			login? ? User.find(session[:user_id])
+			       : nil
+		end
+	end
 
 	get '/' do
 		@title = "#{config["site_name"]}へようこそ"
@@ -44,7 +55,7 @@ class MonaOption < Sinatra::Base
 	end
 	
 	get '/register' do
-		if session[:user_id]
+		if login?
 			flash[:notice] = "すでにログインしています"
 			redirect '/'
 		end
@@ -54,7 +65,7 @@ class MonaOption < Sinatra::Base
 	end
 	
 	post '/register' do
-		redirect '/logout' if session[:user_id]
+		redirect '/logout' if login?
 		
 		# ハッシュ値生成
 		salt = BCrypt::Engine.generate_salt
@@ -68,7 +79,7 @@ class MonaOption < Sinatra::Base
 	end
 	
 	get '/login' do
-		if session[:user_id]
+		if login?
 			flash[:notice] = "すでにログインしています"
 			redirect '/'
 		end
@@ -89,7 +100,7 @@ class MonaOption < Sinatra::Base
 	end
 	
 	get '/logout' do
-		unless session[:user_id]
+		unless login?
 			flash[:notice] = "ログインしていません"
 			redirect '/'
 		end

@@ -135,6 +135,17 @@ body{
 	li{
 		display: inline;
 		line-height: 50px;
+		margin-right: 10px;
+		a{
+			&:link, &:visited{
+				color: white !important;
+				text-decoration: none;
+				transition: .2s;
+			}
+			&:hover, &:active, &:focus{
+				color: #09f !important;
+			}
+		}
 	}
 }
 

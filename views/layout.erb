@@ -9,7 +9,12 @@
 	<header id="page_header">
 		<h1><%= settings.site_name %></h1>
 		<ul id="menu">
-			<li id="user_name">sei0o</li>
+			<% if login_user %>
+				<li id="user_name"><a href="/user/<%= login_user.name %>"><%= login_user.name %></a></li>
+			<% else %>
+				<li><a href="/register">新規登録</a></li>
+				<li><a href="/login">ログイン</a></li>
+			<% end %>
 		</li>
 	</header>
 	<main>

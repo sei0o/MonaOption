@@ -125,6 +125,15 @@ body {
 #menu li {
   display: inline;
   line-height: 50px;
+  margin-right: 10px;
+}
+#menu li a:link, #menu li a:visited {
+  color: white !important;
+  text-decoration: none;
+  transition: .2s;
+}
+#menu li a:hover, #menu li a:active, #menu li a:focus {
+  color: #09f !important;
 }
 
 main {
