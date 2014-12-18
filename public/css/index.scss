@@ -124,13 +124,28 @@ body{
 		display: inline-block;
 		font-size:30px;
 		margin: 10px;
+		a{
+			&:link, &:visited{
+				font-family: 'mplus-1p-bold';
+				color: white;
+				text-decoration: none;
+				transition: .2s;
+			}
+			&:hover, &:active, &:focus{
+				color: #09f;
+			}
+		}
 	}
 }
 
-#menu{
+#head_menu{
+	display: inline;
+	height: 50px;
+}
+
+#left_menu, #menu{
 	padding: 0;
 	margin: 0 20px 0 0;
-	float:right;
 	list-style-type: none;
 	li{
 		display: inline;
@@ -146,6 +161,20 @@ body{
 				color: #09f !important;
 			}
 		}
+	}
+}
+
+#menu{
+	float:right;
+}
+
+#left_menu{
+	display: inline;
+	margin-left: 20px;
+	height: 50px;
+	li{
+		display:inline;
+		line-height: 50px;
 	}
 }
 

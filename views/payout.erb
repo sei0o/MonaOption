@@ -1,0 +1,4 @@
+<form action="/wallet/payout" method="POST">
+  出金する額 <input type="number" name="amount" value="<%= login_user.wallet %>">Mona (残金: <%= login_user.wallet %>Mona)<br>
+  <input type="submit" value="出金">
+</form>

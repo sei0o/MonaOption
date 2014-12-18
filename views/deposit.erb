@@ -1,0 +1,16 @@
+振込先アドレス: <span class="big"><%= login_user.wallet_address %></span><br>
+入金確認済み(６認証）: <span class="big" id="wallet"><%= login_user.wallet %>Mona</span><br>
+入金済み: <%= login_user.wallet 0 %>Mona
+<script>
+  $(function(){
+    function reloadWallet(){
+      $.get('/api/wallet', function(){
+        $("#wallet").text(wallet["amount"]);
+      });
+    }
+    
+    setInterval(reloadWallet, 10000);
+    
+    $("#check_wallet").click(reloadWallet);
+  });
+</script>

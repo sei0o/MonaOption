@@ -1,11 +1,12 @@
 require 'sinatra/base'
 require 'sinatra/flash'
-#require 'sinatra/reloader'
+require 'sinatra/reloader'
 require 'active_record'
 require 'yaml'
 require 'bcrypt'
 require 'mysql2'
 require './monacoinrpc.rb'
+require './models/user.rb'
 
 class MonaOption < Sinatra::Base
 	
@@ -15,28 +16,13 @@ class MonaOption < Sinatra::Base
 
 	configure do
 		Sinatra::Application.reset!
-		use Rack::Reloader
+		#use Rack::Reloader
 		enable :sessions
+		register Sinatra::Reloader
 		register Sinatra::Flash
 		set :site_name, config["site_name"]
 	end
-
-	use ActiveRecord::ConnectionAdapters::ConnectionManagement
-	
-	ActiveRecord::Base.establish_connection(db_config["development"])
-	
-	class User < ActiveRecord::Base
-		def self.auth name, password
-			user = self.find_by name: name
-			
-			# パスワードのハッシュ値が等しかったら
-			if user && user.password == BCrypt::Engine.hash_secret(password, user.password_salt)
-				user
-			else nil
-			end
-		end
-	end
-	
+		
 	helpers do
 		def login?
 			!!session[:user_id]
@@ -46,7 +32,17 @@ class MonaOption < Sinatra::Base
 			login? ? User.find(session[:user_id])
 			       : nil
 		end
+		
+		def user_only message = "ログインしていません"
+			unless login?
+				flash[:notice] = message
+				redirect '/'
+			end
+		end
 	end
+		
+	use ActiveRecord::ConnectionAdapters::ConnectionManagement
+	ActiveRecord::Base.establish_connection(db_config["development"])
 
 	get '/' do
 		@title = "#{config["site_name"]}へようこそ"
@@ -65,14 +61,26 @@ class MonaOption < Sinatra::Base
 	end
 	
 	post '/register' do
-		redirect '/logout' if login?
+		redirect '/' if login?
+		
+		# 重複確認
+		if User.exists? name: params[:name]
+			flash[:warning] = "そのユーザー名はすでに存在します"
+			redirect '/register'
+		end
 		
 		# ハッシュ値生成
 		salt = BCrypt::Engine.generate_salt
 		hashed_password = BCrypt::Engine.hash_secret params[:password], salt
 		
-		if User.create name: params[:name], password: hashed_password, password_salt: salt
-			flash[:success] = "登録に成功しました"
+		user = User.create(name: params[:name],
+									 password: hashed_password,
+									 password_salt: salt,
+									 wallet_address: @@wallet.getnewaddress) # 入出金用のアドレス
+		if user
+			# account設定
+			@@wallet.setaccount user.wallet_address, config["address_prefix"] + user.id.to_s
+			flash[:success] = "登録に成功しました。右上からログインしてください"
 		end
 		
 		redirect '/'
@@ -100,10 +108,7 @@ class MonaOption < Sinatra::Base
 	end
 	
 	get '/logout' do
-		unless login?
-			flash[:notice] = "ログインしていません"
-			redirect '/'
-		end
+		user_only
 		
 		session[:user_id] = nil
 		
@@ -120,6 +125,82 @@ class MonaOption < Sinatra::Base
 		
 		@title = name
 		erb :user
+	end
+	
+	get '/settings' do
+		user_only
+
+		@title = "設定"
+		erb :settings
+	end
+
+	post '/change' do
+		unless @@wallet.validateaddress(params[:address])["isvalid"]
+			flash[:warning] = "アドレスが正しくありません"
+			redirect "/settings"
+		end
+		
+		user = login_user
+		user.payout_address = params[:address]
+		user.save
+		
+		flash[:success] = "保存に成功しました"
+		redirect "/settings"
+	end
+	
+	get '/wallet/deposit' do
+		user_only
+		
+		@title = "入金"
+		erb :deposit
+	end
+	
+	get '/wallet/payout' do
+		user_only
+		
+		@title = "出金"
+		erb :payout
+	end
+	
+	post '/wallet/payout' do
+		amount = params[:amount].to_i
+		
+		if amount > login_user.wallet # payout額が多すぎる
+			flash[:warning] = "出金額が多すぎます"
+			redirect '/wallet/payout'
+		end
+		
+		unless login_user.payout_address
+			flash[:warning] = "出金先アドレスが設定されていません。<a href='/settings'>設定する</a>"
+			redirect '/wallet/payout'
+		end
+		
+		# 支払い
+		@@wallet.walletpassphrase config["wallet_passphrase"], 10
+		@@wallet.sendtoaddress login_user.payout_address, amount
+		@@wallet.walletlock
+		
+		# ユーザーのwalletから減らす
+		# ""という名前のアカウントから支払われるのでそこに転送する
+		@@wallet.move config["address_prefix"] + login_user.id.to_s, "", amount
+		
+		flash[:success] = "出金に成功しました"
+		redirect '/'
+	end
+	
+	get '/trade' do
+		@title = "取引"
+		erb :trade
+	end
+	
+	get '/api/wallet' do
+		content_type :json
+		
+		data = {
+			amount: login_user.wallet
+		}
+		
+		data.to_json
 	end
 	
 end

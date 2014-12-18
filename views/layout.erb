@@ -3,19 +3,29 @@
 <head>
 	<meta charset="UTF-8">
 	<link rel="stylesheet" type="text/css" href="/css/index.css">
+	<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
 	<title><%= @title %> | <%= settings.site_name %></title>
 </head>
 <body>
 	<header id="page_header">
-		<h1><%= settings.site_name %></h1>
-		<ul id="menu">
-			<% if login_user %>
-				<li id="user_name"><a href="/user/<%= login_user.name %>"><%= login_user.name %></a></li>
-			<% else %>
-				<li><a href="/register">新規登録</a></li>
-				<li><a href="/login">ログイン</a></li>
-			<% end %>
-		</li>
+		<h1><a href="/"><%= settings.site_name %></a></h1>
+		<div id="head_menu">
+			<ul id="left_menu">
+				<li><a href="/trade">取引</a></li>
+			</ul>
+			<ul id="menu">
+				<% if login_user %>
+					<li id="user_name"><a href="/user/<%= login_user.name %>"><%= login_user.name %></a></li>
+					<li><a href="/wallet/deposit">入金</a></li>
+					<li><a href="/wallet/payout">出金</a></li>
+					<li>残金: <%= login_user.wallet %> Mona</li>
+					<li><a href="/logout">ログアウト</a></li>
+				<% else %>
+					<li><a href="/register">新規登録</a></li>
+					<li><a href="/login">ログイン</a></li>
+				<% end %>
+			</ul>
+		</div>
 	</header>
 	<main>
 		<%= styled_flash %>
