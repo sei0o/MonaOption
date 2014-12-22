@@ -166,7 +166,7 @@ body {
 main {
   box-sizing: border-box;
   -moz-box-sizing: border-box;
-  width: 70%;
+  width: 80%;
   margin: 0 auto;
   background-color: white;
   padding: 20px;
@@ -217,4 +217,18 @@ main {
 .warning {
   background-color: #f6b0b0;
   color: #961111;
+}
+
+#flex_container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+#graph_cont {
+  width: 80%;
+}
+
+#bet {
+  width: 10%;
 }

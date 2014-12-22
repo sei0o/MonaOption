@@ -1,9 +1,12 @@
 require 'sinatra/base'
 require 'sinatra/flash'
 require 'sinatra/reloader'
+require 'net/http'
+require 'uri'
 require 'active_record'
 require 'yaml'
 require 'bcrypt'
+require 'json'
 require 'mysql2'
 require './monacoinrpc.rb'
 require './models/user.rb'
@@ -12,6 +15,7 @@ class MonaOption < Sinatra::Base
 	
 	config = YAML.load_file "config.yml"
 	db_config = YAML.load_file "database.yml"
+	markets_config = YAML.load_file "markets.yml"
 	@@wallet = MonacoinRPC.new "http://#{config["user"]}:#{config["password"]}@#{config["host"]}:#{config["port"]}"
 
 	configure do
@@ -189,6 +193,12 @@ class MonaOption < Sinatra::Base
 	end
 	
 	get '/trade' do
+		@markets = []
+		markets_config.each do |pair, param|
+			from, to = pair.split "_"
+			@markets << {from: from, to: to, param: param}
+		end
+		
 		@title = "取引"
 		erb :trade
 	end
@@ -198,6 +208,39 @@ class MonaOption < Sinatra::Base
 		
 		data = {
 			amount: login_user.wallet
+		}
+		
+		data.to_json
+	end
+	
+	get '/api/exchange/*' do |pair|
+		content_type :json
+		
+		market = pair.split "_"
+		
+		param_rate =
+		if market.size == 1 # param指定の場合
+			market[0]
+		else
+			case market
+			when ["usd", "jpy"] then 1
+			end
+		end
+		
+		uri = URI.parse "http://bn-options.com/fjaxs/getRateFront/a:#{param_rate}"
+		req = Net::HTTP::Get.new uri.request_uri
+		res = nil
+		
+		Net::HTTP.new(uri.host, uri.port).start do |h|
+			res = h.request req
+		end
+		
+		# レスポンスからレートだけ取り出し
+		rates = JSON.parse(res.body)["rate"]
+		
+		data = {
+			time: rates[-1][0],
+			rate: rates[-1][1]
 		}
 		
 		data.to_json

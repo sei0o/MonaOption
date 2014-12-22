@@ -4,7 +4,7 @@
 <script>
   $(function(){
     function reloadWallet(){
-      $.get('/api/wallet', function(){
+      $.get('/api/wallet', function(wallet){
         $("#wallet").text(wallet["amount"]);
       });
     }
