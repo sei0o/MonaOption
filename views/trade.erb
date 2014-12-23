@@ -7,161 +7,127 @@
 <div id="flex_container">
   <div id="graph_cont">
     <div id="scale"></div>
-    <canvas id="graph" height="400" width="600"></canvas>
+    <div id="graph" style="height: 400px;" height="400" width="600"></div>
   </div>
   <div id="bet">
     <form action="/order" method="POST">
-      <input type="number" name="amount">Mona
-      <input type="submit" name="type" value="high">
+      <input type="number" name="amount">Mona<br>
+      <input type="submit" name="type" value="high"><br>
       <input type="submit" name="type" value="low">
     </form>
   </div>
 </div>
-<script src="/javascript/libraries/smoothie/smoothie.js"></script>
+<script src="/javascript/libraries/flotr2/flotr2.min.js"></script>
 <script>
   $(function(){
     var GraphVerticalSections = 10;
     
     var market = 1;
-    var graphTimeData = [];
-    var graphRateData = [];
-    var graphData = [];
-    var graph = new SmoothieChart({
-      yRangeFunction: adjustRange,
-      millisPerPixel: 500,
-      interpolation: 'linear',
-      grid: {
-        fillStyle: '#444250',
-        strokeStyle: 'rgba(119,119,119,0.29)',
-        sharpLines: true,
-        millisPerLine: 5000,
-        verticalSections: GraphVerticalSections, // 区切り線で区切られる「間」の数
-        borderVisible: false
-      },
-      labels: {
-        //fontSize: 12
-        disabled: true
-      }
-    });
-    var graphLine = new TimeSeries();
+    var graphData; // 今までのレートを入れておく
+    var nextJudge;
+    var lastJudge
     
-    var scaleTemplate = $('<span>');
-    scaleTemplate.addClass('scale_label');
-    scaleTemplate.css("position", "relative");
-    scaleTemplate.css("left", 0);
-    scaleTemplate.css("top", 0);
-    scaleTemplate.text("0.00");
-
-    graph.addTimeSeries(graphLine, {
-      lineWidth: 1.8,
-      strokeStyle: '#55bbff',
-      fillStyle: 'rgba(153,153,153,0.30)'
-    });
-    graph.streamTo($('#graph').get(0), 0);
+    getLastJudge();
+    getNextJudge();
+    untilNowRates();
+    
+    var marketReloadTimer = setInterval(function(){
+      reloadExchange(function(data){
+        drawGraph();
+      })
+    }, 1000);
+    
+    var checkJudgeTimer = setInterval(checkJudge, 1000);
+    
+    $("#pairs").change(changeMarket);
+    $("#graph_cont").css("position", "relative");
+    $("#scale").css("position", "absolute");
     
     function changeMarket(){
-      graphTimeData = [];
-      graphRateData = [];
-      
       market = $("#pairs").val();
-      
-      // グラフリセット
-      graphLine.clear();
       
       reloadExchange();
     }
     
     function reloadExchange(callback){
-      console.log(market);
-      
       $.get('/api/exchange/'+market, function(data){
         $("#rate").text(data["rate"]);
-        graphTimeData.push(data["time"]);
-        graphRateData.push(data["rate"]);
         graphData.push([data["time"], data["rate"]]);
         
         callback(data);
       })
     }
     
-    function createScaleLabel() {
-      var canvasHeight = $('#graph').css("height");
-      
-      // GraphVerticalSectionsは区切り線で区切られる「間」の数
-      // したがって、「区切り線」の数は「間」+1でもとまる
-      for (var i = 0; i < GraphVerticalSections + 1; i++) {
-        var scaleLabel = {};
-        scaleLabel = scaleTemplate.clone(true);
-        scaleLabel.appendTo($('#scale'));
-        
-        // 更新用に属性を設定しておく
-        scaleLabel.attr("data-id", i);
-        
-        // 区切り線1個分個分下にずらす & 区切り線に合うように位置調整
-        var scaleHeight = parseInt( scaleLabel.css("height").replace("px", ""), 10 );
-        scaleLabel.css("top", parseInt(canvasHeight, 10) / GraphVerticalSections * i - scaleHeight/2);
-        
-        adjustXPoint(i);
+    function checkJudge(){
+      // 判断時刻になっ(てい)たら
+      if (new Date().getTime() >= nextJudge) {
+        // 更新
+        getNextJudge();
+        getLastJudge();
       }
     }
     
-    function drawScaleLabel(min, max){
-      console.log(min, max);
-      
-      // 区切り線1本ごとの差異を計算
-      // GraphVerticalSectionsに+1しないのは
-      // canvas.heightをGraphVerticalSectionsで等しく分けるため
-      // (ホワイトボードを見ること)
-      var scaleStep = (max - min) / GraphVerticalSections;
-      
-      for (var i = 0; i < GraphVerticalSections + 1; i++){
-        var scaleLabel = $('.scale_label[data-id='+ i +']');
-        
-        adjustXPoint(i);
-        scaleLabel.text((max - scaleStep * i).toFixed(4));
-      }
+    function untilNowRates(){
+      $.get('/api/exchange/old/'+market, function(data){
+        graphData = data;
+      });
     }
     
-    // scaleLabelのwidthはinnertextで変動するので
-    // 位置を調整しなければならない
-    function adjustXPoint(dataId) {
-      var scaleLabel = $('.scale_label[data-id='+ dataId +']');
-      
-      // scaleLabel i個分左にずらす <- i*scaleWidth分だけ要素のデフォルト配置が右にずれるから
-      var graphWidth = parseInt( $('#graph').css("width").replace("px", ""), 10 )
-      var scaleWidth = parseInt( scaleLabel.css("width").replace("px", ""), 10 );
-      scaleLabel.css("left", graphWidth - scaleWidth * dataId + 10); // 10はpadding
+    function getNextJudge(){
+      $.get('/api/next_judge', function(data){
+        nextJudge = data["next"];
+        console.log(nextJudge);
+      });
+    }
+    
+    function getLastJudge(){
+      $.get('/api/last_judge', function(data){
+        lastJudge = data["last"];
+        console.log(lastJudge);
+      })
     }
    
-    function adjustRange(range){
+    function adjustRange(){ // グラフの上下のpaddingを計算
+      var rateMax = graphData.reduce(function(x, y){
+        if (x[1] > y[1]) return x;
+        return y;
+      })[1];
+      
+      var rateMin = graphData.reduce(function(x, y){
+        if (x[1] > y[1]) return y;
+        return x;
+      })[1];
       
       // レートの振幅の30%をそれぞれ上下paddingに
-      var rateWidth = range.max - range.min;
+      var rateWidth = rateMax - rateMin;
       var padding = rateWidth / 100 * 30;
       
-      // 区切り線ラベルの更新
-      if ($('#scale').is(':empty')){
-        createScaleLabel();
-      }
-      drawScaleLabel(range.min - padding, range.max + padding);
-
-      return {min: range.min - padding, max: range.max + padding};
+      return { paddedMax: rateMax + padding,
+               paddedMin: rateMin - padding,
+               max: rateMax,
+               min: rateMin};
     }
    
-    function addData(data){
-      graphLine.append(new Date().getTime(), data["rate"]);
+    function drawGraph(){
+      padded = adjustRange();
+      console.log(lastJudge, nextJudge);
+      Flotr.draw($('#graph').get(0), [graphData], {
+        xaxis: {
+          minorTickFreq: 4,
+          mode: 'time',
+          timeMode: 'local',
+          timeUnit: 'second',
+          min: lastJudge,
+          max: nextJudge
+        },
+        yaxis: {
+          min: padded.paddedMin,
+          max: padded.paddedMax
+        },
+        grid: {
+          minorVerticalLines: true
+        }
+      });
     }
-    
-    setInterval(function(){
-      reloadExchange(function(data){
-        addData(data);
-        
-        //mozRequestAnimationFrame(drawGraph);
-      })
-    }, 1000);
-    
-    $("#pairs").change(changeMarket);
-    $("#graph_cont").css("position", "relative");
-    $("#scale").css("position", "absolute");
   });
 </script>

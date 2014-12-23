@@ -226,9 +226,12 @@ main {
 }
 
 #graph_cont {
-  width: 80%;
+  width: 75%;
 }
 
 #bet {
-  width: 10%;
+  width: 25%;
+}
+#bet input[type="number"] {
+  -moz-appearance: none;
 }

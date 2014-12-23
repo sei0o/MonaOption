@@ -10,10 +10,12 @@ require 'json'
 require 'mysql2'
 require './monacoinrpc.rb'
 require './models/user.rb'
+require './autojudge.rb'
 
 class MonaOption < Sinatra::Base
 	
 	config = YAML.load_file "config.yml"
+	@@config = config
 	db_config = YAML.load_file "database.yml"
 	markets_config = YAML.load_file "markets.yml"
 	@@wallet = MonacoinRPC.new "http://#{config["user"]}:#{config["password"]}@#{config["host"]}:#{config["port"]}"
@@ -28,6 +30,7 @@ class MonaOption < Sinatra::Base
 	end
 		
 	helpers do
+		
 		def login?
 			!!session[:user_id]
 		end
@@ -42,6 +45,32 @@ class MonaOption < Sinatra::Base
 				flash[:notice] = message
 				redirect '/'
 			end
+		end
+		
+		def market_of pair_or_param
+			market = pair_or_param.split "_"
+			
+			if market.size == 1 # param指定の場合
+				market[0]
+			else
+				case market
+				when ["usd", "jpy"] then 1
+				end
+			end
+		end
+		
+		def save_config
+			File.open "config.yml", "w" do |file|
+				YAML.dump config, file
+			end
+		end
+		
+		def next_judge
+			Time.at @@config["last_judge"] + @@config["judge_interval"]
+		end
+		
+		def last_judge
+			Time.at @@config["last_judge"]
 		end
 	end
 		
@@ -213,19 +242,31 @@ class MonaOption < Sinatra::Base
 		data.to_json
 	end
 	
+	get '/api/exchange/old/*' do |pair|
+		content_type :json
+		
+		param = market_of pair
+		
+		uri = URI.parse "http://bn-options.com/fjaxs/getDealFront/a:#{param}"
+		req = Net::HTTP::Get.new uri.request_uri
+		res = nil
+		
+		Net::HTTP.new(uri.host, uri.port).start do |h|
+			res = h.request req
+		end
+		
+		rates = JSON.parse(res.body)["tick"] # レート取り出し
+		
+		# 過去120秒間の分だけ
+		rates = rates[-120..-1] # -120~-1の要素
+		
+		rates.to_json
+	end
+	
 	get '/api/exchange/*' do |pair|
 		content_type :json
 		
-		market = pair.split "_"
-		
-		param_rate =
-		if market.size == 1 # param指定の場合
-			market[0]
-		else
-			case market
-			when ["usd", "jpy"] then 1
-			end
-		end
+		param_rate = market_of pair
 		
 		uri = URI.parse "http://bn-options.com/fjaxs/getRateFront/a:#{param_rate}"
 		req = Net::HTTP::Get.new uri.request_uri
@@ -244,6 +285,29 @@ class MonaOption < Sinatra::Base
 		}
 		
 		data.to_json
+	end
+	
+	get '/api/next_judge' do
+		content_type :json
+		
+		{
+			next: next_judge.to_i # epochで渡す
+		}.to_json
+	end
+	
+	get '/api/last_judge' do
+		content_type :json
+		
+		{
+			last: last_judge.to_i 
+		}.to_json
+	end
+	
+	post '/api/reload_config' do
+		puts "reloaded / #{next_judge.to_i} / #{last_judge.to_i}"
+		config = YAML.load_file "config.yml"
+		@@config = config
+		puts "reloaded2 / #{next_judge.to_i} / #{last_judge.to_i}"
 	end
 	
 end
