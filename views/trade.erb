@@ -59,6 +59,7 @@
     var checkJudgeTimer = setInterval(checkJudge, 1000);
     
     var reloadRemainTimer = setInterval(reloadRemain, 1000);
+    var reloadWalletTimer = setInterval(getWallet, 1000);
     
     $("#pairs").change(changeMarket);
     $("#graph_cont").css("position", "relative");
@@ -77,9 +78,10 @@
       // グラフ初期化
       plotHighData = [];
       plotLowData = [];
-      graphData = untilNowRates();
+      untilNowRates();
       
-      //reloadExchange();
+      // orderを取得
+      
     }
     
     function reloadExchange(callback){
@@ -123,6 +125,8 @@
         getNextJudge();
         getLastJudge();
         getNextDeadline();
+        plotHighData = [];
+        plotLowData = [];
         
         // いままで表示していたRatesを削除(もう表示されないので無駄
         // だしy軸自動paddingが効かなくなる)
@@ -133,6 +137,7 @@
     function untilNowRates(){
       $.get('/api/exchange/old/'+market, function(data){
         graphData = data;
+        getOrders();
       });
     }
     
@@ -152,6 +157,31 @@
       $.get('/api/next_deadline', function(data){
         nextDeadline = data["next"];
         graphBar.data = [ nextDeadline, 0 ];
+      });
+    }
+    
+    function getOrders() {
+      $.get('/api/orders/'+market, function(res){
+        var orders = res["orders"];
+        for(var i_o in orders){
+          var order = orders[i_o];
+          
+          var rate = 0;
+          for(var i in graphData){ // order.timeにおけるレートを取得
+            var data = graphData[i];
+            if (data[0] == order["time"]) {
+              rate = data[1];
+              break;
+            }
+          }
+          if (order["direction"] == "high") {
+            plotHighData.push([order["time"], rate]);
+          }else{
+            plotLowData.push([order["time"], rate]);
+          }
+          console.log(graphData[i]);
+        }
+        console.log(plotHighData, plotLowData);
       });
     }
    

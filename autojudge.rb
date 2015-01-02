@@ -60,8 +60,6 @@ t1 = Thread.start do
 			# 判断
 			payouts = {} # 支払いリスト
 			Order.all.each do |order|
-				# highでtimeのrateよりjudge時のrateが高いか
-				# lowでtimeのrateよりjudge時のrateが低いか
 				order_rate = 0
 				rates[order.market_id].each do |rate| # 当該marketのうちから
 					if rate[0] == order.time # orderされた時間と等しい時間の[time,rate]
@@ -69,6 +67,8 @@ t1 = Thread.start do
 						break
 					end
 				end
+				# 見つからない -> 今回の期間に入らない
+				next if order_rate == 0
 				
 				judge_rate = rates[order.market_id][-1][1] # 直近のrate
 				if (order.direction == "high" && order_rate < judge_rate) || # highでjudge時のrateが上回っていたら

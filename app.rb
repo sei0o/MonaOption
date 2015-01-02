@@ -275,6 +275,11 @@ class MonaOption < Sinatra::Base
 		if params[:amount].to_f < 0
 			return { error: "金額をマイナスにしても、Monaはもらえません。Monaが欲しいならAskMonaやFaucetへ。" }.to_json
 		end
+		# deadlineを超えてる
+		if params[:time].to_i > next_deadline.to_i
+			return { error: "締め切りを超えています" }.to_json
+		end
+		
 		puts "hoge " + params[:direction].to_s
 		order = Order.create(direction: params[:direction],
 												 amount: params[:amount].to_f,
@@ -357,6 +362,17 @@ class MonaOption < Sinatra::Base
 		config = YAML.load_file "config.yml"
 		@@config = config
 		puts "reloaded2 / #{next_judge.to_i} / #{last_judge.to_i}"
+	end
+	
+	get '/api/orders/*' do |pair|
+		content_type :json
+		
+		market = market_of pair
+		
+		{
+			# see: http://stackoverflow.com/questions/15427936/how-to-convert-activerecord-results-into-a-array-of-hashes
+			orders: Order.where(market_id: market).map(&:serializable_hash)
+		}.to_json
 	end
 	
 end
