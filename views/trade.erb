@@ -2,19 +2,24 @@
   <% @markets.each do |market| %>
     <option value="<%= market[:param] %>"><%= market[:from].upcase %> / <%= market[:to].upcase %></option>
   <% end %>
-</select><br>
-レート： <span id="rate">???.?</span><br>
+</select>
 <div id="flex_container">
   <div id="graph_cont">
-    <div id="scale"></div>
+    締切まで: <span id="remain_deadline">00:00:00</span>　　　残り時間: <span id="remain">00:00:00</span>
     <div id="graph" style="height: 400px;" height="400" width="600"></div>
   </div>
   <div id="bet">
+    <div id="rate">???.?</div>
     <form action="/order" method="POST">
-      <input type="number" name="amount">Mona<br>
-      <input type="submit" name="type" value="high"><br>
-      <input type="submit" name="type" value="low">
+      <div id="amount">
+        <input type="text" name="amount" value="0.1"><span>Mona</span>
+      </div>
+      <input type="submit" name="direction" value="high">
+      <input type="submit" name="direction" value="low">
+      <input type="hidden" name="market_id" value="1">
+      <input type="hidden" name="time" value="1">
     </form>
+    <div id="status">入金額を入力して、HIGHまたはLOWを押してください。</div>
   </div>
 </div>
 <script src="/javascript/libraries/flotr2/flotr2.min.js"></script>
@@ -24,11 +29,25 @@
     
     var market = 1;
     var graphData; // 今までのレートを入れておく
+    var plotHighData = []; // 今までのHigh Orderを入れておく
+    var plotLowData = []; // 今までのLow Orderを入れておく
     var nextJudge;
-    var lastJudge
+    var lastJudge;
+    var nextDeadline;
+    var graphBar = {
+      data: [],
+      color: '#ffbc66',
+      lines: {
+        lineWidth: 1,
+      },
+      mouse: {
+        track: false,
+      }
+    };
     
     getLastJudge();
     getNextJudge();
+    getNextDeadline();
     untilNowRates();
     
     var marketReloadTimer = setInterval(function(){
@@ -39,31 +58,75 @@
     
     var checkJudgeTimer = setInterval(checkJudge, 1000);
     
+    var reloadRemainTimer = setInterval(reloadRemain, 1000);
+    
     $("#pairs").change(changeMarket);
     $("#graph_cont").css("position", "relative");
     $("#scale").css("position", "absolute");
+    $("#bet > form").submit(function(event){
+      event.preventDefault();
+      
+      var clicked = event.originalEvent.explicitOriginalTarget.attributes.getNamedItem("value").value;// クリックされたsubmitのvalueを取得(high/low)
+      order(clicked);
+    });
     
     function changeMarket(){
       market = $("#pairs").val();
+      $("input[name='market_id']").val(market);
       
-      reloadExchange();
+      // グラフ初期化
+      plotHighData = [];
+      plotLowData = [];
+      graphData = untilNowRates();
+      
+      //reloadExchange();
     }
     
     function reloadExchange(callback){
       $.get('/api/exchange/'+market, function(data){
         $("#rate").text(data["rate"]);
+        $("input[name='time']").val(data["time"]); // orderように時間を設定
         graphData.push([data["time"], data["rate"]]);
         
         callback(data);
       })
     }
     
+    function reloadRemain(){ // 残り時間を更新
+      var remainDeadline = (nextDeadline - new Date().getTime()/1000).toFixed(0);
+      var remainJudge    = (nextJudge    - new Date().getTime()/1000).toFixed(0);
+      
+      remainDeadline = 0 > remainDeadline ? 0 : remainDeadline; // 0以下にならないように
+      remainJudge    = 0 > remainJudge    ? 0 : remainJudge;
+      
+      // hh:mm:ssに変換
+      $("#remain_deadline").text(("0" + Math.floor(remainDeadline / 3600     )).slice(-2) +":"+
+                                 ("0" + Math.floor(remainDeadline % 3600 / 60)).slice(-2) +":"+
+                                 ("0" + remainDeadline % 60).slice(-2));
+      $("#remain").text(("0" + Math.floor(remainJudge / 3600     )).slice(-2) +":"+
+                        ("0" + Math.floor(remainJudge % 3600 / 60)).slice(-2) +":"+
+                        ("0" + remainJudge % 60).slice(-2));
+    }
+    
+    function getWallet(){
+      $.get("/api/wallet", function(data){
+        $("#wallet").text(data["amount"] + " Mona");
+      });
+    }
+    
     function checkJudge(){
       // 判断時刻になっ(てい)たら
-      if (new Date().getTime() >= nextJudge) {
+      // 1000で割っているのはgetTimeがミリ秒を返すから
+      if (new Date().getTime() / 1000 >= nextJudge) {
+        console.log("judged");
         // 更新
         getNextJudge();
         getLastJudge();
+        getNextDeadline();
+        
+        // いままで表示していたRatesを削除(もう表示されないので無駄
+        // だしy軸自動paddingが効かなくなる)
+        graphData = [];
       }
     }
     
@@ -76,15 +139,20 @@
     function getNextJudge(){
       $.get('/api/next_judge', function(data){
         nextJudge = data["next"];
-        console.log(nextJudge);
       });
     }
     
     function getLastJudge(){
       $.get('/api/last_judge', function(data){
         lastJudge = data["last"];
-        console.log(lastJudge);
       })
+    }
+    
+    function getNextDeadline(){
+      $.get('/api/next_deadline', function(data){
+        nextDeadline = data["next"];
+        graphBar.data = [ nextDeadline, 0 ];
+      });
     }
    
     function adjustRange(){ // グラフの上下のpaddingを計算
@@ -103,15 +171,31 @@
       var padding = rateWidth / 100 * 30;
       
       return { paddedMax: rateMax + padding,
-               paddedMin: rateMin - padding,
-               max: rateMax,
-               min: rateMin};
+               paddedMin: rateMin - padding, };
     }
    
     function drawGraph(){
       padded = adjustRange();
-      console.log(lastJudge, nextJudge);
-      Flotr.draw($('#graph').get(0), [graphData], {
+      
+      Flotr.draw($('#graph').get(0), [graphData, graphBar,
+        {
+          data: plotHighData,
+          color: "#da3a45",
+          points: {
+            show: true,
+            radius: 5
+          },
+        },
+        {
+          data: plotLowData,
+          color: "#296cff",
+          points: {
+            show: true,
+            radius: 5
+          },
+        }], {
+        color: '#ccc',
+        shadowSize: 0,
         xaxis: {
           minorTickFreq: 4,
           mode: 'time',
@@ -126,7 +210,57 @@
         },
         grid: {
           minorVerticalLines: true
+        },
+        mouse: {
+          track: true,
+          sensibility: 8,
+          relative: true,
+          // *1000するのはDateクラスがepoch"ミリ"秒を受け取るから
+          trackFormatter: function(obj){ return epochFormat(obj.x * 1000) +' / ' + obj.y; } 
         }
+      });
+    }
+    
+    function epochFormat(epoch){
+      var date = new Date(epoch);
+      return date.getHours() +":"+ date.getMinutes() +":"+ date.getSeconds();
+    }
+    
+    function order(direction){ // direction: "high" or "low"
+      var form = $("#bet > form");
+      var buttons = form.find("input[type='submit']");
+    
+      console.log(direction);
+      $.ajax({
+        url: form.attr("action"),
+        type: form.attr("method"),
+        data: form.serialize() + '&direction=' + direction,
+        timeout: 10000,
+        beforeSend: function(xhr, setting){
+          // ボタン無効化
+          buttons.attr("disabled", true);
+        },
+        complete: function(xhr, status){
+          // ボタン有効か
+          buttons.attr("disabled", false);
+          // 残金更新
+          getWallet();
+        },
+        success: function(xhr, status){
+          if (xhr["error"]) { // エラー
+            $("#status").addClass("warning");
+            $("#status").text(xhr["error"]);
+            return;
+          }
+          $("#status").addClass("success");
+          $("#status").text(xhr["success"]);
+   
+          // orderを保存
+          // 今の時刻から一番近い->最後の graphDataの要素のレートを取得
+          var latestRate = graphData[graphData.length - 1];
+          direction == "high" ? plotHighData.push(latestRate) // high/low分けて保存（グラフplotのため)
+                              : plotLowData.push(latestRate);
+        },
       });
     }
   });

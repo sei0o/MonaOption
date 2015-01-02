@@ -18,7 +18,7 @@
 					<li id="user_name"><a href="/user/<%= login_user.name %>"><%= login_user.name %></a></li>
 					<li><a href="/wallet/deposit">入金</a></li>
 					<li><a href="/wallet/payout">出金</a></li>
-					<li>残金: <%= login_user.wallet %> Mona</li>
+					<li id="wallet">残金: <%= login_user.wallet %> Mona</li>
 					<li><a href="/logout">ログアウト</a></li>
 				<% else %>
 					<li><a href="/register">新規登録</a></li>

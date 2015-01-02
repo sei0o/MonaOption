@@ -230,8 +230,71 @@ main {
 }
 
 #bet {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  padding: 10px;
   width: 25%;
 }
-#bet input[type="number"] {
+#bet #rate {
+  font-size: 40px;
+  text-align: center;
+}
+#bet #amount {
+  border-radius: 3px;
+  border: solid 1px #ccc;
+  position: relative;
+}
+#bet #amount span {
+  position: absolute;
+  right: 5px;
+  bottom: 8px;
+}
+#bet #status {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  margin-top: 10px;
+  border-radius: 3px;
+  padding: 8px;
+}
+#bet input[name="amount"] {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
   -moz-appearance: none;
+  border: none;
+  width: 100%;
+  height: 50px;
+  font-size: 28px;
+  padding-right: 47px;
+  text-align: right;
+}
+#bet input[type="submit"] {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -moz-appearance: none;
+  width: 100%;
+  height: 70px;
+  border: none;
+  margin-top: 10px;
+  transition: .2s;
+  font-size: 25px;
+  color: white;
+  text-transform: uppercase;
+}
+#bet input[type="submit"][value="high"] {
+  background-color: #da3a45;
+  border-bottom: solid 5px #921c24;
+}
+#bet input[type="submit"][value="high"]:hover {
+  border-bottom: none;
+  height: 65px;
+  margin-top: 15px;
+}
+#bet input[type="submit"][value="low"] {
+  background-color: #296cff;
+  border-bottom: solid 5px #003dc2;
+}
+#bet input[type="submit"][value="low"]:hover {
+  border-bottom: none;
+  height: 65px;
+  margin-top: 15px;
 }

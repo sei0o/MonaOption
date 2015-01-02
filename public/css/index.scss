@@ -1,6 +1,8 @@
 $warning: #e72626;
 $success: #25875a;
 $notice:  #aa6800;
+$high: #da3a45;
+$low: #296cff;
 
 @mixin boxSizing {
 	box-sizing: border-box;
@@ -247,8 +249,67 @@ main{
 }
 
 #bet{
+	@include boxSizing;
+	padding: 10px;
 	width: 25%;
-	input[type="number"]{
+	#rate{
+		font-size: 40px;
+		text-align: center;
+	}
+	#amount{
+		border-radius: 3px;
+		border:solid 1px #ccc;
+		position: relative;
+		span{
+			position: absolute;
+			right: 5px;
+			bottom: 8px;
+		}
+	}
+	#status{
+		@include boxSizing;
+		margin-top: 10px;
+		border-radius: 3px;
+		padding: 8px;
+	}
+	input[name="amount"]{
+		@include boxSizing;
 		-moz-appearance: none;
+		border: none;
+		width: 100%;
+		height: 50px;
+		font-size: 28px;
+		padding-right: 47px;
+		text-align: right;
+	}
+	input[type="submit"]{
+		@include boxSizing;
+		-moz-appearance: none;
+		width: 100%;
+		height: 70px;
+		border: none;
+		margin-top: 10px;
+		transition: .2s;
+		font-size: 25px;
+		color:white;
+		text-transform: uppercase;
+		&[value="high"]{
+			background-color: $high;
+			border-bottom: solid 5px darken($high, 20%);
+			&:hover{
+				border-bottom: none;
+				height: 65px;
+				margin-top: 15px;
+			}
+		}
+		&[value="low"]{
+			background-color: $low;
+			border-bottom: solid 5px darken($low, 20%);
+			&:hover{
+				border-bottom: none;
+				height: 65px;
+				margin-top: 15px;
+			}
+		}
 	}
 }

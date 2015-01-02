@@ -1,8 +1,18 @@
+#      __  ___                  ____        __  _           
+#     /  |/  /___  ____  ____ _/ __ \____  / /_(_)___  ____ 
+#    / /|_/ / __ \/ __ \/ __ `/ / / / __ \/ __/ / __ \/ __ \
+#   / /  / / /_/ / / / / /_/ / /_/ / /_/ / /_/ / /_/ / / / /
+#  /_/  /_/\____/_/ /_/\__,_/\____/ .___/\__/_/\____/_/ /_/ 
+#                                /_/
+#
+# Wow, This code seems spaghetti
+
 require 'sinatra/base'
 require 'sinatra/flash'
 require 'sinatra/reloader'
 require 'net/http'
 require 'uri'
+require 'unirest'
 require 'active_record'
 require 'yaml'
 require 'bcrypt'
@@ -10,18 +20,26 @@ require 'json'
 require 'mysql2'
 require './monacoinrpc.rb'
 require './models/user.rb'
+require './models/order.rb'
 require './autojudge.rb'
 
 class MonaOption < Sinatra::Base
 	
 	config = YAML.load_file "config.yml"
 	@@config = config
+	@@wallet = MonacoinRPC.new "http://#{config["user"]}:#{config["password"]}@#{config["host"]}:#{config["port"]}"
 	db_config = YAML.load_file "database.yml"
 	markets_config = YAML.load_file "markets.yml"
-	@@wallet = MonacoinRPC.new "http://#{config["user"]}:#{config["password"]}@#{config["host"]}:#{config["port"]}"
+	
+	markets = []
+	markets_config.each do |pair, param|
+		from, to = pair.split "_"
+		markets << {from: from, to: to, param: param}
+	end
 
 	configure do
 		Sinatra::Application.reset!
+		
 		#use Rack::Reloader
 		enable :sessions
 		register Sinatra::Reloader
@@ -71,6 +89,11 @@ class MonaOption < Sinatra::Base
 		
 		def last_judge
 			Time.at @@config["last_judge"]
+		end
+		
+		def next_deadline
+			# deadlineは次のjudgeの何秒前にbetを締切るか
+			Time.at next_judge.to_i - @@config["deadline"]
 		end
 	end
 		
@@ -196,10 +219,14 @@ class MonaOption < Sinatra::Base
 	end
 	
 	post '/wallet/payout' do
-		amount = params[:amount].to_i
+		amount = params[:amount].to_f
 		
 		if amount > login_user.wallet # payout額が多すぎる
 			flash[:warning] = "出金額が多すぎます"
+			redirect '/wallet/payout'
+		end
+		if amount <= 0
+			flash[:warning] = "出金額が0以下です。"
 			redirect '/wallet/payout'
 		end
 		
@@ -209,6 +236,7 @@ class MonaOption < Sinatra::Base
 		end
 		
 		# 支払い
+		pp amount
 		@@wallet.walletpassphrase config["wallet_passphrase"], 10
 		@@wallet.sendtoaddress login_user.payout_address, amount
 		@@wallet.walletlock
@@ -222,14 +250,41 @@ class MonaOption < Sinatra::Base
 	end
 	
 	get '/trade' do
-		@markets = []
-		markets_config.each do |pair, param|
-			from, to = pair.split "_"
-			@markets << {from: from, to: to, param: param}
-		end
+		@markets = markets
+		#markets_config.each do |pair, param|
+		#	from, to = pair.split "_"
+		#	@markets << {from: from, to: to, param: param}
+		#end
 		
 		@title = "取引"
 		erb :trade
+	end
+	
+	post '/order' do
+		content_type :json
+		unless login?
+			return { error: "ログインしてください" }.to_json
+		end
+		
+		if params[:amount].to_f > login_user.wallet
+			return { error: "残高不足です" }.to_json
+		end
+		if params[:amount].to_f == 0
+			return { error: "0Monaかけてサーバーの資源を無駄にしないでください" }.to_json
+		end
+		if params[:amount].to_f < 0
+			return { error: "金額をマイナスにしても、Monaはもらえません。Monaが欲しいならAskMonaやFaucetへ。" }.to_json
+		end
+		puts "hoge " + params[:direction].to_s
+		order = Order.create(direction: params[:direction],
+												 amount: params[:amount].to_f,
+												 user_id: login_user.id,
+												 market_id: params[:market_id].to_i,
+												 time: params[:time].to_i)
+		
+		{
+			success: "取引成功"
+		}.to_json
 	end
 	
 	get '/api/wallet' do
@@ -247,18 +302,12 @@ class MonaOption < Sinatra::Base
 		
 		param = market_of pair
 		
-		uri = URI.parse "http://bn-options.com/fjaxs/getDealFront/a:#{param}"
-		req = Net::HTTP::Get.new uri.request_uri
-		res = nil
+		res = Unirest.get "http://bn-options.com/fjaxs/getDealFront/a:#{param}"
+		rates = res.body["tick"] # レート取り出し
 		
-		Net::HTTP.new(uri.host, uri.port).start do |h|
-			res = h.request req
-		end
-		
-		rates = JSON.parse(res.body)["tick"] # レート取り出し
-		
-		# 過去120秒間の分だけ
-		rates = rates[-120..-1] # -120~-1の要素
+		# 現在からlast_judgeの分だけ(無駄なデータを省くと同時にグラフのy軸調整のため)
+		elapsed_from_last_judge = Time.new.to_i - last_judge.to_i
+		rates = rates[-elapsed_from_last_judge..-1] # -interval~-1の要素
 		
 		rates.to_json
 	end
@@ -268,16 +317,8 @@ class MonaOption < Sinatra::Base
 		
 		param_rate = market_of pair
 		
-		uri = URI.parse "http://bn-options.com/fjaxs/getRateFront/a:#{param_rate}"
-		req = Net::HTTP::Get.new uri.request_uri
-		res = nil
-		
-		Net::HTTP.new(uri.host, uri.port).start do |h|
-			res = h.request req
-		end
-		
-		# レスポンスからレートだけ取り出し
-		rates = JSON.parse(res.body)["rate"]
+		res = Unirest.get "http://bn-options.com/fjaxs/getRateFront/a:#{param_rate}"
+		rates = res.body["rate"]
 		
 		data = {
 			time: rates[-1][0],
@@ -300,6 +341,14 @@ class MonaOption < Sinatra::Base
 		
 		{
 			last: last_judge.to_i 
+		}.to_json
+	end
+	
+	get '/api/next_deadline' do
+		content_type :json
+		
+		{
+			next: next_deadline.to_i
 		}.to_json
 	end
 	

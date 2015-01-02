@@ -1,4 +1,5 @@
 require 'active_record'
+require_relative './order.rb'
 
 class User < ActiveRecord::Base
 	@@config = YAML.load_file "config.yml"
@@ -14,8 +15,23 @@ class User < ActiveRecord::Base
 		end
 	end
 	
-	def wallet confirmations = 6
+	def on_order
+		orders = Order.where(user_id: self.id)
+		return 0 unless orders
+		
+		unless orders.is_a? ActiveRecord::Relation
+			orders.amount
+		else
+			orders.inject(0) do |sum, order| # order中の総額
+				sum += order.amount
+			end
+		end
+	end
+	
+	def wallet confirmations = 0
 		# 現在ログイン中のユーザーのwallet残額
-		@@wallet.getbalance @@config["address_prefix"] + self.id.to_s, confirmations
+		wallet = @@wallet.getbalance @@config["address_prefix"] + self.id.to_s, confirmations
+		
+		wallet - self.on_order # order中の総額を引く
 	end
 end

@@ -5,7 +5,7 @@
   $(function(){
     function reloadWallet(){
       $.get('/api/wallet', function(wallet){
-        $("#wallet").text(wallet["amount"]);
+        $("#wallet").text("残金: " + wallet["amount"] + " Mona");
       });
     }
     
