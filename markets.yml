@@ -1,7 +1,21 @@
-usd_jpy: 1
-eur_jpy: 2
-gbp_jpy: 3
-aud_jpy: 4
-eur_usd: 5
-gbp_usd: 6
-aud_usd: 7
+usd_jpy:
+  id: 1
+  payout: 1.5
+eur_jpy:
+  id: 2
+  payout: 1.5
+gbp_jpy:
+  id: 3
+  payout: 1.5
+aud_jpy:
+  id: 4
+  payout: 1.5
+eur_usd:
+  id: 5
+  payout: 1.5
+gbp_usd:
+  id: 6
+  payout: 1.5
+aud_usd:
+  id: 7
+  payout: 1.5

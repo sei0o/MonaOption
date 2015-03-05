@@ -1,6 +1,6 @@
 <select id="pairs">
   <% @markets.each do |market| %>
-    <option value="<%= market[:param] %>"><%= market[:from].upcase %> / <%= market[:to].upcase %></option>
+    <option value="<%= market[:id] %>"><%= market[:from].upcase %> / <%= market[:to].upcase %> : <%= market[:payout] %>倍</option>
   <% end %>
 </select>
 <div id="flex_container">
@@ -245,7 +245,7 @@
           track: true,
           sensibility: 8,
           relative: true,
-          // *1000するのはDateクラスがepoch"ミリ"秒を受け取るから
+          // *1000するのはDateクラスが"ミリ"秒を受け取るから
           trackFormatter: function(obj){ return epochFormat(obj.x * 1000) +' / ' + obj.y; } 
         }
       });

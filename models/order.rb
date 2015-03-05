@@ -1,4 +1,5 @@
 require 'active_record'
+require_relative '../monacoinrpc.rb'
 
 class Order < ActiveRecord::Base
 	@@config = YAML.load_file "config.yml"

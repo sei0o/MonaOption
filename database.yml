@@ -2,15 +2,7 @@ development:
   adapter: mysql2
   encoding: utf8
   host: localhost
-  database: dbname_development
-  username: username
-  password: passwd
-  socket: /var/run/mysqld/mysqld.sock
-production:
-  adapter: mysql2
-  encoding: utf8
-  host: localhost
-  database: dbname_development
-  username: username
-  password: passwd
-  socket: /var/run/mysqld/mysqld.sock
+  database: monaoption
+  username: mop
+  password: Chr0ma_K!e%u
+  socket: /tmp/mysql.sock

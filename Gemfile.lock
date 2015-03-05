@@ -25,6 +25,8 @@ GEM
     minitest (5.5.1)
     multi_json (1.11.0)
     mysql2 (0.3.17)
+    puma (2.11.1)
+      rack (>= 1.1, < 2.0)
     rack (1.6.0)
     rack-protection (1.5.3)
       rack
@@ -65,8 +67,10 @@ DEPENDENCIES
   activerecord
   bcrypt
   mysql2
+  puma
   rack
   sinatra
+  sinatra-contrib
   sinatra-flash
   sinatra-reloader
   unirest

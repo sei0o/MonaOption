@@ -14,6 +14,13 @@ config = YAML.load_file "config.yml"
 db_config = YAML.load_file "database.yml"
 markets_config = YAML.load_file "markets.yml"
 
+markets = []
+markets_config.each do |pair, param|
+	from, to = pair.split "_"
+	markets << {from: from, to: to, id: param["id"], payout: param["payout"]}
+end
+pp markets
+
 # ここが実行されるのはサーバー起動時の一回だけ
 # だから、last_judgeを現在時刻に設定しておく
 # そうしないと、最終判断時刻と現在時刻に間ができて、
@@ -44,7 +51,8 @@ t1 = Thread.start do
 			
 			# ordersテーブルを元にbetを徴収
 			Order.all.each do |order|
-				wallet.move config["address_prefix"] + order.user_id.to_s, config["wallet_account"], order.amount
+				pp order.amount.to_f
+				wallet.move config["address_prefix"] + order.user_id.to_s, config["wallet_account"], order.amount.to_f
 			end
 			
 			puts "--------MOVED--------"
@@ -53,8 +61,8 @@ t1 = Thread.start do
 			# /api/からレートを取得(まだlast_judgeは更新していないので、前の判断から今までのrateが返ってくる)
 			rates = []
 			markets_config.each do |pair, param|
-				res = Unirest.get "http://#{config["server_host"]}:#{config["server_port"]}/api/exchange/old/#{param}"
-				rates[param] = res.body
+				res = Unirest.get "http://#{config["server_host"]}:#{config["server_port"]}/api/exchange/old/#{param['id']}"
+				rates[param["id"]] = res.body
 			end
 			
 			# 判断
@@ -77,7 +85,7 @@ t1 = Thread.start do
 		  		# monaoption用のアドレスに送金
 					payout_account = config["address_prefix"] + order.user_id.to_s
 				  payout_address = wallet.getaddressesbyaccount(payout_account)[0]
-					payouts[payout_address] = order.amount * 1.2 # とりあえずペイアウトは1.2
+					payouts[payout_address] = order.amount.to_f * markets[order.market_id][:payout]
 				else print "LOSE: " end
 				puts "#{order.amount} / order: #{order_rate} / judge: #{judge_rate} / dir: #{order.direction}"
 			end

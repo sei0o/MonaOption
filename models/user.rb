@@ -1,5 +1,7 @@
 require 'active_record'
+require_relative '../monacoinrpc.rb'
 require_relative './order.rb'
+
 
 class User < ActiveRecord::Base
 	@@config = YAML.load_file "config.yml"
